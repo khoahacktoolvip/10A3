@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tra cứu điểm - Môn Sinh</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ==== Popup đăng nhập đẹp + fix nền ==== */
+    #loginOverlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      background: linear-gradient(180deg,#070f25 0%,#070f18 100%);
+      background-attachment: fixed;
+      backdrop-filter: blur(14px) saturate(1.1);
+      -webkit-backdrop-filter: blur(14px) saturate(1.1);
+      animation: fadeIn .4s ease forwards;
+    }
+    @keyframes fadeIn {from{opacity:0}to{opacity:1}}
+    @keyframes fadeOut {from{opacity:1}to{opacity:0}}
+    @keyframes popIn {from{transform:scale(0.9);opacity:0}to{transform:scale(1);opacity:1}}
+
+    .login-box {
+      position: relative;
+      background: rgba(15,25,45,0.65);
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 42px 34px;
+      width: 340px;
+      text-align: center;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+      overflow: hidden;
+      animation: popIn .5s ease;
+    }
+    .login-glow {
+      position: absolute;
+      inset: -2px;
+      background: linear-gradient(120deg,#06b6d4,#7c3aed,#06b6d4);
+      filter: blur(25px);
+      opacity: .35;
+      z-index: 0;
+      animation: rotateGlow 6s linear infinite;
+    }
+    @keyframes rotateGlow {0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+    .login-box h2 {color: #e6eef6; margin-bottom: 4px; position: relative; z-index: 1;}
+    .login-box .subtitle {color: #94a3b8; font-size: 14px; margin-bottom: 26px; position: relative; z-index: 1;}
+    .input-wrap {position: relative; margin-bottom: 26px;}
+    .input-wrap input {
+      width: 100%; padding: 10px 8px;
+      border: none; border-bottom: 1px solid rgba(255,255,255,0.2);
+      background: transparent; color: #fff; font-size: 15px; outline: none;
+    }
+    .input-wrap label {
+      position: absolute; left: 8px; top: 10px; color: #aaa;
+      pointer-events: none; transition: 0.2s ease;
+    }
+    .input-wrap input:focus + label,
+    .input-wrap input:valid + label {
+      top: -8px; font-size: 12px; color: #06b6d4;
+    }
+    .input-wrap .underline {
+      position: absolute; left: 0; bottom: 0; height: 2px; width: 0%;
+      background: linear-gradient(90deg,#06b6d4,#7c3aed); transition: width .3s ease;
+    }
+    .input-wrap input:focus ~ .underline {width: 100%;}
+    .login-btn {
+      width: 100%; padding: 10px; margin-top: 10px;
+      font-weight: 600; border: none; border-radius: 10px;
+      background: linear-gradient(90deg,#06b6d4,#7c3aed); color: #fff;
+      cursor: pointer; transition: all .3s ease; position: relative; z-index: 1;
+    }
+    .login-btn:hover {transform: translateY(-2px); box-shadow: 0 4px 18px rgba(6,182,212,0.4);}
+    .login-btn.ghost {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .login-btn.ghost:hover {background: rgba(255,255,255,0.15);}
+    .hint {margin-top: 12px; font-size: 13px; color: #94a3b8; opacity: .9;}
+    .fadeOut {animation: fadeOut .4s ease forwards;}
+    .fadeIn {animation: fadeIn .4s ease forwards;}
+  </style>
+</head>
+
+<body>
+  <!-- ==== Trang người xem ==== -->
+  <div class="container" id="viewerSection">
+    <div class="header">
+      <div class="brand">
+        <div>
+          <div class="title">Tra cứu điểm - Môn Sinh</div>
+          <div class="small">Dữ liệu chỉ hiển thị, không thể sửa (Trang người xem)</div>
+        </div>
+      </div>
+      <div class="controls">
+        <input id="q" class="input search" placeholder="Tìm theo tên hoặc lớp...">
+        <button id="refresh" class="btn ghost">Làm mới</button>
+        <button id="openAdmin" class="btn">Đăng nhập Admin</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <strong id="meta"></strong>
+          <div class="small">Hiển thị danh sách điểm (Miệng, 15’, giữa kì, học kì)</div>
+        </div>
+        <div class="small">Nguồn: localStorage > data.js</div>
+      </div>
+
+      <table class="table" id="tbl">
+        <thead>
+          <tr>
+            <th>#</th><th>Tên</th><th>Lớp</th>
+            <th>Miệng</th><th>15'</th><th>Giữa kì</th><th>HK</th><th>TB</th>
+          </tr>
+        </thead>
+        <tbody id="body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ==== Trang Admin ==== -->
+  <div class="container" id="adminSection" style="display:none;">
+    <div class="header">
+      <div class="brand">
+        <div class="logo">A</div>
+        <div>
+          <div class="title">Admin - Quản lý điểm</div>
+          <div class="small">Mật khẩu mặc định: <strong>admin123</strong></div>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="logout" class="btn ghost">Đăng xuất</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+        <div>
+          <strong>Quản lý dữ liệu</strong>
+          <div class="small">Chỉnh sửa trực tiếp bảng — Lưu vào localStorage hoặc xuất file</div>
+        </div>
+        <div class="controls">
+          <button id="importBtn" class="btn ghost">Nhập JSON</button>
+          <input type="file" id="fileInput" style="display:none" accept="application/json">
+          <button id="exportJSON" class="btn">Xuất JSON</button>
+          <button id="exportDataJs" class="btn">Xuất data.js</button>
+          <button id="resetDefault" class="btn ghost">Khôi phục mẫu</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <label class="small">Trường: <input id="schoolName" class="input"></label>
+        <label class="small">Môn: <input id="subjectName" class="input"></label>
+        <label class="small">Weights:
+          <input id="wM" class="input" style="width:48px">
+          <input id="wS" class="input" style="width:48px">
+          <input id="wMid" class="input" style="width:48px">
+          <input id="wF" class="input" style="width:48px">
+        </label>
+      </div>
+
+      <table class="table" id="admintbl">
+        <thead>
+          <tr>
+            <th>#</th><th>Tên</th><th>Lớp</th><th>Miệng</th><th>15'</th><th>Giữa kì</th><th>HK</th><th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody id="adminBody"></tbody>
+      </table>
+
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button id="saveLocal" class="btn">Lưu localStorage</button>
+        <button id="addRow" class="btn ghost">Thêm học sinh</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==== Popup đăng nhập ==== -->
+  <div id="loginOverlay">
+    <div class="login-box">
+      <div class="login-glow"></div>
+      <h2>Đăng nhập Quản trị</h2>
+      <p class="subtitle">Vui lòng nhập mật khẩu để truy cập admin</p>
+      <div class="input-wrap">
+        <input id="pw" type="password" required>
+        <label for="pw">Mật khẩu admin</label>
+        <div class="underline"></div>
+      </div>
+      <button id="doLogin" class="login-btn">Đăng nhập</button>
+      <button id="cancelLogin" class="login-btn ghost">Hủy</button>
+      <div class="hint">Mặc định: <b>admin123</b></div>
+    </div>
+  </div>
+
+  <!-- ==== Script ==== -->
+  <script src="data.js"></script>
+  <script>
+const STORAGE_KEY='school_data_v1';
+
+// Tải dữ liệu từ localStorage hoặc file data.js
+function loadData(){
+  const raw=localStorage.getItem(STORAGE_KEY);
+  if(raw) return JSON.parse(raw);
+  return window.SCHOOL_DATA||{metadata:{},students:[]};
+}
+
+// Tính điểm trung bình theo trọng số
+function parseNum(v){const n=parseFloat(v);return Number.isFinite(n)?n:''}
+function calcAvg(s,w){
+  const m=parseNum(s.mouth), s15=parseNum(s.small), mid=parseNum(s.mid), f=parseNum(s.final);
+  let sum=0, wSum=0;
+  if(m!==''){sum+=m*w.mouth;wSum+=w.mouth}
+  if(s15!==''){sum+=s15*w.small;wSum+=w.small}
+  if(mid!==''){sum+=mid*w.mid;wSum+=w.mid}
+  if(f!==''){sum+=f*w.final;wSum+=w.final}
+  if(!wSum)return'';return Math.round(sum/wSum*100)/100;
+}
+
+let DATA=loadData();
+const viewer=document.getElementById('viewerSection');
+const admin=document.getElementById('adminSection');
+const overlay=document.getElementById('loginOverlay');
+
+// Mở popup đăng nhập
+document.getElementById('openAdmin').onclick=()=>overlay.style.display='flex';
+document.getElementById('cancelLogin').onclick=()=>overlay.style.display='none';
+
+// Xử lý đăng nhập
+document.getElementById('doLogin').onclick=()=>{
+  const pw=document.getElementById('pw').value;
+  if(pw==='admin123'){
+    overlay.style.display='none';
+    viewer.classList.add('fadeOut');
+    setTimeout(()=>{
+      viewer.style.display='none';
+      admin.style.display='block';
+      admin.classList.add('fadeIn');
+      initAdmin();
+    },350);
+  }else alert('Sai mật khẩu!');
+};
+
+// Đăng xuất
+document.getElementById('logout').onclick=()=>{
+  admin.classList.add('fadeOut');
+  setTimeout(()=>{
+    admin.style.display='none';
+    viewer.style.display='block';
+    viewer.classList.add('fadeIn');
+  },350);
+};
+
+// === HIỂN THỊ NGƯỜI XEM ===
+const tb=document.getElementById('body');
+const weights=DATA.metadata.weights||{mouth:1,small:1,mid:2,final:3};
+document.getElementById('meta').innerText=DATA.metadata.school+' — '+DATA.metadata.subject;
+
+function render(q=''){
+  tb.innerHTML='';
+  q=q.trim().toLowerCase();
+  DATA.students.forEach((s,i)=>{
+    if(q && !(s.name.toLowerCase().includes(q)||(s.class||'').toLowerCase().includes(q)))return;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td>${s.name}</td>
+      <td>${s.class||''}</td>
+      <td>${s.mouth||''}</td>
+      <td>${s.small||''}</td>
+      <td>${s.mid||''}</td>
+      <td>${s.final||''}</td>
+      <td>${calcAvg(s,weights)||''}</td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+render();
+document.getElementById('q').oninput=e=>render(e.target.value);
+document.getElementById('refresh').onclick=()=>{DATA=loadData();render();alert('Đã làm mới dữ liệu.')};
+
+// === ADMIN ===
+function initAdmin(){
+  const raw=localStorage.getItem(STORAGE_KEY);
+  if(raw) DATA=JSON.parse(raw);
+
+  document.getElementById('schoolName').value=DATA.metadata.school||'';
+  document.getElementById('subjectName').value=DATA.metadata.subject||'';
+  document.getElementById('wM').value=DATA.metadata.weights?.mouth??1;
+  document.getElementById('wS').value=DATA.metadata.weights?.small??1;
+  document.getElementById('wMid').value=DATA.metadata.weights?.mid??2;
+  document.getElementById('wF').value=DATA.metadata.weights?.final??3;
+  renderAdminTable();
+}
+
+// === BẢNG NHẬP ĐIỂM TRONG ADMIN ===
+function renderAdminTable(){
+  const tbody=document.getElementById('adminBody');
+  tbody.innerHTML='';
+  DATA.students.forEach((s,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td><input class="input" data-id="${s.id}" data-f="name" value="${s.name||''}" placeholder="Họ và tên"></td>
+      <td><input class="input" data-id="${s.id}" data-f="class" value="${s.class||''}" placeholder="Lớp"></td>
+      <td><input class="input" data-id="${s.id}" data-f="mouth" value="${s.mouth||''}" placeholder="Miệng"></td>
+      <td><input class="input" data-id="${s.id}" data-f="small" value="${s.small||''}" placeholder="15 phút"></td>
+      <td><input class="input" data-id="${s.id}" data-f="mid" value="${s.mid||''}" placeholder="Giữa kỳ"></td>
+      <td><input class="input" data-id="${s.id}" data-f="final" value="${s.final||''}" placeholder="Học kỳ"></td>
+      <td><button class="btn ghost" data-del="${s.id}">Xóa</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Lắng nghe thay đổi input
+  tbody.querySelectorAll('input').forEach(inp=>{
+    inp.onchange=e=>{
+      const id=parseInt(e.target.dataset.id);
+      const f=e.target.dataset.f;
+      const idx=DATA.students.findIndex(x=>x.id===id);
+      if(idx!==-1) DATA.students[idx][f]=e.target.value.trim();
+    };
+  });
+
+  // Xử lý nút xóa
+  tbody.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.onclick=e=>{
+      const id=parseInt(e.target.dataset.del);
+      if(confirm('Bạn có chắc muốn xóa học sinh này?')){
+        DATA.students=DATA.students.filter(x=>x.id!==id);
+        renderAdminTable();
+      }
+    };
+  });
+}
+
+// === THÊM HỌC SINH MỚI ===
+document.getElementById('addRow').onclick=()=>{
+  const newId=(DATA.students.reduce((a,b)=>Math.max(a,b.id),0)||0)+1;
+  DATA.students.push({id:newId,name:'(Tên mới)',class:'',mouth:'',small:'',mid:'',final:''});
+  renderAdminTable();
+};
+
+// === LƯU, XUẤT, NHẬP, KHÔI PHỤC ===
+document.getElementById('saveLocal').onclick=()=>{
+  DATA.metadata.school=document.getElementById('schoolName').value;
+  DATA.metadata.subject=document.getElementById('subjectName').value;
+  DATA.metadata.weights={
+    mouth:parseFloat(document.getElementById('wM').value)||1,
+    small:parseFloat(document.getElementById('wS').value)||1,
+    mid:parseFloat(document.getElementById('wMid').value)||2,
+    final:parseFloat(document.getElementById('wF').value)||3
+  };
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(DATA));
+  alert('✅ Đã lưu vào localStorage.');
+};
+
+// Xuất JSON
+document.getElementById('exportJSON').onclick=()=>{
+  const blob=new Blob([JSON.stringify(DATA,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='data-export.json';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// Xuất data.js
+document.getElementById('exportDataJs').onclick=()=>{
+  const content='window.SCHOOL_DATA='+JSON.stringify(DATA,null,2)+';';
+  const blob=new Blob([content],{type:'application/javascript'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='data-export.js';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// Nhập JSON
+document.getElementById('fileInput').onchange=e=>{
+  const f=e.target.files[0];
+  if(!f) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const parsed=JSON.parse(ev.target.result);
+      if(parsed.students){
+        DATA=parsed;
+        renderAdminTable();
+        alert('✅ Đã nhập dữ liệu từ file JSON.');
+      }else alert('❌ File sai định dạng.');
+    }catch(err){
+      alert('Lỗi đọc file: '+err);
+    }
+  };
+  reader.readAsText(f);
+};
+document.getElementById('importBtn').onclick=()=>document.getElementById('fileInput').click();
+
+// Khôi phục dữ liệu mẫu
+document.getElementById('resetDefault').onclick=()=>{
+  if(confirm('Khôi phục dữ liệu mẫu từ data.js?')){
+    DATA=window.SCHOOL_DATA;
+    renderAdminTable();
+    alert('✅ Đã khôi phục dữ liệu mẫu.');
+  }
+};
+
+
+  </script>
+</body>
+</html>
